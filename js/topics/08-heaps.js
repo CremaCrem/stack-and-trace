@@ -1,4 +1,4 @@
-/* World 8 — Heaps, Priority Queues, Heap Sort (Week 8) */
+/* World 8 — Heaps, Priority Queues, Heap Sort */
 (function (ST) {
   'use strict';
   const h = ST.h, U = ST.util, ui = ST.ui, K = ST.kit;
@@ -263,21 +263,79 @@
     return L;
   }
 
+  // ================================================================ lesson
+  const lk = ST.lk;
+  const RULES = [
+    { rule: 'One insert or one swap = one step', note: 'We draw every move. Many books only show the finished heap.' },
+    { rule: 'Heap sort: root → DELETED → SORTED slot', note: 'With a min heap this gives descending order. A max heap gives ascending.' }
+  ];
+  function lesson() {
+    const HP = ST.kit.heapPos(7, 480, 26, 50);
+    const AX = lk.xs(7, 40, 6);
+    // a heap as an array of values; tree on top, the same array below. o: { cls: {v}, out: v, extra }
+    const heap = function (arr, cap, o) {
+      o = o || {};
+      const n = [], e = [];
+      arr.forEach(function (v, i) {
+        const c = (o.cls && o.cls[v]) || '';
+        n.push({ id: 't' + v, x: HP[i].x, y: HP[i].y, r: 18, label: v, cls: c, fs: 16 });
+        n.push({ id: 'a' + v, t: 'cell', x: AX[i], y: 196, w: 40, h: 36, label: v, cls: c, fs: 16, top: o.idx ? String(i) : undefined });
+        if (i) e.push({ id: 'h' + i, a: 't' + arr[Math.floor((i - 1) / 2)], b: 't' + v });
+      });
+      if (o.out !== undefined) n.push({ id: 't' + o.out, x: 440, y: 40, r: 18, label: o.out, cls: 'bad', fs: 16 });
+      return { nodes: n.concat(o.extra || []), edges: e, cap: cap };
+    };
+    const H = [3, 5, 8, 9, 6, 10, 12];
+    const look = function (i, cap) {
+      const cls = {};
+      cls[H[i]] = 'cur';
+      [2 * i + 1, 2 * i + 2].forEach(function (c) { if (H[c] !== undefined) cls[H[c]] = 'wait'; });
+      return heap(H, cap, { cls: cls, idx: true, extra: [lk.text('f', 470, 18, 'i = ' + i + ' → 2i+1 = ' + (2 * i + 1) + ', 2i+2 = ' + (2 * i + 2), 'ink', 12, 'end')] });
+    };
+    return [
+      { title: 'Fill row by row', frames: [
+        heap([3], 'Index 0 is the **root**.'),
+        heap([3, 5, 8], 'Next row: left to right.'),
+        heap(H, 'No gaps: a **complete** tree.'),
+        heap(H, 'Same values, stored as an **array**.', { idx: true })
+      ] },
+      { title: 'Find kids with index math', frames: [
+        look(0, 'Root at 0. Kids at **1** and **2**.'),
+        look(1, 'At 1: kids at **3** and **4**.'),
+        look(2, 'At 2: kids at **5** and **6**.')
+      ] },
+      { title: 'Insert: add at end, swap up', frames: [
+        heap([3, 5, 8, 9, 6, 10], 'A min heap. Insert **2**.'),
+        heap([3, 5, 8, 9, 6, 10, 2], 'Add it at the **end**.', { cls: { 2: 'cur' } }),
+        heap([3, 5, 2, 9, 6, 10, 8], '2 < parent 8 → **swap**.', { cls: { 2: 'cur', 8: 'bad' } }),
+        heap([2, 5, 3, 9, 6, 10, 8], '2 < parent 3 → **swap**.', { cls: { 2: 'cur', 3: 'bad' } }),
+        heap([2, 5, 3, 9, 6, 10, 8], 'At the root. **O(log n)** swaps at most.', { cls: { 2: 'done' } })
+      ] },
+      { title: 'Remove root: last goes up', frames: [
+        heap([2, 5, 3, 9, 6, 10, 8], 'Remove the root (the min).', { cls: { 2: 'cur' } }),
+        heap([8, 5, 3, 9, 6, 10], 'Take it out. The **last** value moves up.', { out: 2, cls: { 8: 'cur' } }),
+        heap([3, 5, 8, 9, 6, 10], '8 > smaller kid 3 → **swap down**.', { out: 2, cls: { 8: 'cur', 3: 'bad' } }),
+        heap([3, 5, 8, 9, 6, 10], '8 < 10. Stop. Heap again.', { cls: { 3: 'done' } })
+      ] },
+      { title: 'A heap is not sorted', trap: true, frames: [
+        heap([1, 4, 2, 9, 5, 3, 7], 'A valid min heap.'),
+        heap([1, 4, 2, 9, 5, 3, 7], 'Left kid 4 > right kid 2. **Allowed.**', { cls: { 4: 'bad', 2: 'bad' } }),
+        heap([1, 4, 2, 9, 5, 3, 7], 'Only **parent ≤ child** is promised.', { cls: { 1: 'done', 4: 'wait', 2: 'wait' } })
+      ] }
+    ];
+  }
+
   ST.topic({
-    id: 'heaps', n: 8, week: 'Week 8', color: 'red', icon: 'heaps',
+    id: 'heaps', n: 8, color: 'red', icon: 'heaps',
     title: 'Heaps & Heap Sort',
     short: 'A complete tree stored in an array. The min or max is always on top.',
     blurb: 'The best item is always at the root. Perfect for priority queues.',
-    remember: [
-      { big: 'FILL ROW BY ROW', text: 'A heap is a complete binary tree: top to bottom, left to right.' },
-      { big: 'MIN ≤ · MAX ≥', text: 'Only parent vs child is ordered. The whole tree is NOT sorted.' },
-      { big: '(i−1)/2 · 2i+1 · 2i+2', text: 'Parent, left child, right child — all found with index math.' }
-    ],
     cheat: {
       head: ['Operation', 'How', 'Time'],
       rows: [['Peek min/max', 'Look at index 0', 'O(1)'], ['Insert', 'Add at end, move up', 'O(log n)'], ['Remove root', 'Last to root, move down', 'O(log n)'], ['Build (heapify)', 'Bottom-up', 'O(n)'], ['Heap sort', 'Remove root n times', 'O(n log n)']]
     },
-    mistake: 'A heap is not a BST. In a heap the left child can be bigger than the right child. Only parent and child are compared.',
+    lesson: lesson(),
+    rules: RULES,
     labs: [
       { id: 'build', title: 'Build a heap', tag: 'TRACE', setup: buildLab },
       { id: 'sort', title: 'Heap sort', tag: 'TRACE', setup: sortLab },

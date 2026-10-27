@@ -18,6 +18,8 @@
   function playedCount(t) { return Object.keys(played[t.id] || {}).filter(function (k) { return t.labs.some(function (l) { return l.id === k; }); }).length; }
 
   let current = { destroy: function () {} };
+  // course details, set in index.html: ST.start({ course, school, term, author })
+  let site = {};
 
   // ---------------------------------------------------------------- top bar
   function topBar() {
@@ -77,7 +79,7 @@
     const hero = h('section', { class: 'hero' },
       h('div', { class: 'hero-grid wrap' },
         h('div', { class: 'hero-copy' },
-          h('p', { class: 'kicker' }, 'CC 104 · DATA STRUCTURES & ALGORITHMS'),
+          h('p', { class: 'kicker' }, (site.course ? site.course + ' · ' : '') + 'DATA STRUCTURES & ALGORITHMS'),
           h('h1', { class: 'hero-title' }, h('span', null, 'STACK'), h('span', { class: 'amp' }, '&'), h('span', null, 'TRACE')),
           h('p', { class: 'hero-sub' }, 'Every lesson as a picture you can step through. Less reading. More watching.'),
           h('div', { class: 'hero-btns' },
@@ -103,11 +105,9 @@
     const cards = ST.topics.map(function (t) {
       const done = playedCount(t);
       return h('a', { class: 'cart c-' + t.color, href: '#/t/' + t.id },
-        t.now ? h('span', { class: 'cart-now' }, '★ NOW IN CLASS') : null,
         h('div', { class: 'cart-top' },
           h('span', { class: 'cart-n' }, (t.n < 10 ? '0' : '') + t.n),
           h('span', { class: 'cart-icon', html: ST.icon(t.icon) })),
-        h('div', { class: 'cart-week' }, t.week.toUpperCase()),
         h('h3', { class: 'cart-title' }, t.title),
         h('p', { class: 'cart-short' }, t.short),
         h('div', { class: 'cart-foot' },
@@ -121,7 +121,7 @@
       h('div', { class: 'wrap' },
         h('div', { class: 'map-head' },
           h('h2', { class: 'giant' }, 'WORLD', h('br'), 'MAP'),
-          h('p', { class: 'map-note' }, 'Pick a topic. Each one has short "remember" cards and step-by-step labs.')),
+          h('p', { class: 'map-note' }, 'Pick a topic. Watch the lesson, then try the labs.')),
         h('div', { class: 'carts' }, cards)
       )
     );
@@ -131,7 +131,7 @@
       h('div', { class: 'wrap' },
         h('h2', { class: 'giant giant-light' }, 'HOW TO PLAY'),
         h('div', { class: 'how-grid' },
-          howCard('1', 'PICK', 'Choose a topic from the map. Read the 3 cards. That is the whole lesson in short.'),
+          howCard('1', 'WATCH', 'Pick a topic. The lesson plays itself: small moving pictures, a few words each.'),
           howCard('2', 'STEP', 'Press ▶ or the → key. Watch one small change at a time. Press ← to go back.'),
           howCard('3', 'PREDICT', 'Turn on PREDICT. Guess the next step before you see it. Earn coins.')
         ),
@@ -155,11 +155,13 @@
   }
 
   function footer() {
+    const made = [site.course, site.school, site.term].filter(Boolean).join(', ');
     return h('footer', { class: 'foot' },
       h('div', { class: 'wrap foot-in' },
         h('span', { class: 'foot-logo', html: ST.mascot('idle') }),
-        h('p', null, 'Stack & Trace — a visual study companion for CC 104 Data Structures and Algorithms, IDSC, 1st Semester A.Y. 2026–2027.'),
-        h('p', { class: 'foot-small' }, 'Class rules used here: start at A, check neighbors in alphabetical order, arrays start at index 0.')
+        h('p', null, 'Stack & Trace — a visual study companion for Data Structures and Algorithms.' +
+          (made ? ' Made for ' + made + '.' : '') + (site.author ? ' By ' + site.author + '.' : '')),
+        h('p', { class: 'foot-small' }, 'Yellow CLASS RULES boxes mark this course\'s conventions (like "start at A"). The algorithms allow other choices.')
       ));
   }
 
@@ -220,20 +222,14 @@
       h('div', { class: 'wrap band-grid' },
         h('div', null,
           h('a', { class: 'back', href: '#/' }, '← MAP'),
-          h('div', { class: 'band-meta' }, h('span', { class: 'chip' }, t.week.toUpperCase()), h('span', { class: 'chip chip-ghost' }, 'WORLD ' + t.n)),
+          h('div', { class: 'band-meta' }, h('span', { class: 'chip' }, 'WORLD ' + t.n)),
           h('h1', { class: 'band-title' }, t.title),
           h('p', { class: 'band-sub' }, t.blurb)),
         h('div', { class: 'band-icon', html: ST.icon(t.icon) })
       ),
       torn('torn-paper'));
 
-    const remember = h('section', { class: 'wrap remember' },
-      h('h2', { class: 'pixel-h' }, 'REMEMBER THIS'),
-      h('div', { class: 'cards' }, t.remember.map(function (r, k) {
-        return h('div', { class: 'rcard rc-' + k },
-          h('div', { class: 'rcard-big' }, r.big),
-          h('p', null, r.text));
-      })));
+    const lesson = ST.lessonView(t);
 
     const tabs = h('div', { class: 'tabs', role: 'tablist', 'aria-label': 'Labs' });
     const winTitle = h('span', null, '');
@@ -270,8 +266,7 @@
       labWin);
 
     const extra = h('section', { class: 'wrap extra' },
-      t.cheat ? h('div', { class: 'cheat' }, h('h3', { class: 'pixel-h' }, 'CHEAT SHEET'), ST.ui.table(t.cheat.head, t.cheat.rows, { cls: 'cheat-t' })) : null,
-      t.mistake ? h('div', { class: 'mistake' }, h('span', { class: 'mistake-tag' }, 'COMMON MISTAKE'), h('p', null, t.mistake)) : null
+      t.cheat ? h('div', { class: 'cheat' }, h('h3', { class: 'pixel-h' }, 'CHEAT SHEET'), ST.ui.table(t.cheat.head, t.cheat.rows, { cls: 'cheat-t' })) : null
     );
 
     const nav = h('nav', { class: 'wrap topic-nav', 'aria-label': 'Topics' },
@@ -279,13 +274,15 @@
       nextT ? h('a', { class: 'btn btn-yellow', href: '#/t/' + nextT.id }, nextT.title + ' →') : h('a', { class: 'btn btn-yellow', href: '#/' }, 'Back to map'));
 
     app.appendChild(band);
-    app.appendChild(remember);
+    if (lesson.el) app.appendChild(lesson.el);
+    const rules = ST.rulesView(t);
+    if (rules) app.appendChild(rules);
     app.appendChild(labs);
     app.appendChild(extra);
     app.appendChild(nav);
     app.appendChild(footer());
     openLab(lab, false);
-    return { destroy: function () { if (labInst && labInst.destroy) labInst.destroy(); } };
+    return { destroy: function () { lesson.destroy(); if (labInst && labInst.destroy) labInst.destroy(); } };
   }
 
   // ---------------------------------------------------------------- router
@@ -303,7 +300,7 @@
       document.title = 'Colors · Stack & Trace';
       current = legendPage(app);
     } else {
-      document.title = 'Stack & Trace · CC 104 visual labs';
+      document.title = 'Stack & Trace · DSA visual labs';
       current = homePage(app);
     }
     window.scrollTo(0, 0);
@@ -322,7 +319,8 @@
     else if (e.key === 'End') { e.preventDefault(); p.go(p.frames.length - 1); }
   }
 
-  ST.start = function () {
+  ST.start = function (cfg) {
+    site = cfg || {};
     document.body.insertBefore(topBar(), document.body.firstChild);
     window.addEventListener('hashchange', function () {
       const parts = (location.hash || '').replace(/^#\/?/, '').split('/');

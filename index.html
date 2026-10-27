@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Stack &amp; Trace · CC 104 visual labs</title>
-  <meta name="description" content="Step-by-step visual labs for CC 104 Data Structures and Algorithms: arrays, searching, stacks, queues, linked lists, sorting, recursion, trees, heaps, hash tables, graphs and greedy algorithms.">
+  <title>Stack &amp; Trace · DSA visual labs</title>
+  <meta name="description" content="Animated lessons and step-by-step labs for Data Structures and Algorithms: arrays, searching, stacks, queues, linked lists, sorting, recursion, trees, heaps, hash tables, graphs and greedy algorithms.">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -23,6 +23,7 @@
   <script src="js/core/scene.js"></script>
   <script src="js/core/kit.js"></script>
   <script src="js/core/player.js"></script>
+  <script src="js/core/lesson.js"></script>
   <script src="js/core/app.js"></script>
 
   <!-- topics (one file per world) -->
@@ -39,6 +40,13 @@
   <script src="js/topics/11-weighted.js"></script>
   <script src="js/topics/12-greedy.js"></script>
 
-  <script>ST.start();</script>
+  <!-- course details: change these for your own class (any can be left empty) -->
+  <script>
+    ST.start({
+      course: 'CC 104',
+      school: 'IDSC',
+      author: ''
+    });
+  </script>
 </body>
 </html>

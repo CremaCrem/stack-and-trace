@@ -1,4 +1,4 @@
-/* World 3 — Stacks and Queues (Week 1, ADTs) */
+/* World 3 — Stacks and Queues */
 (function (ST) {
   'use strict';
   const h = ST.h, U = ST.util, ui = ST.ui;
@@ -137,21 +137,102 @@
     };
   }
 
+  // ================================================================ lesson
+  const lk = ST.lk;
+  const RULES = [];
+  function lesson() {
+    const stack = function (items, cap, o) {
+      o = o || {};
+      const n = [{ id: 'well', t: 'box', x: 200, y: 125, w: 136, h: 170, cls: 'clear' }];
+      items.forEach(function (v, k) { n.push({ id: 's' + v, t: 'cell', x: 200, y: 190 - k * 40, w: 110, h: 34, label: v, cls: o.hot === v ? 'cur' : '', from: { x: 200, y: -20 } }); });
+      if (o.out) n.push({ id: 's' + o.out, t: 'cell', x: 380, y: 60, w: 110, h: 34, label: o.out, cls: 'bad' });
+      n.push(lk.tag('top', 90, items.length ? 190 - (items.length - 1) * 40 : 190, items.length ? 'TOP →' : 'EMPTY', 'yellow'));
+      return { nodes: n.concat(o.extra || []), cap: cap };
+    };
+    const queue = function (items, cap, o) {
+      o = o || {};
+      const xs = lk.xs(Math.max(1, items.length), 60, 8);
+      const n = items.map(function (v, k) { return { id: 'q' + v, t: 'cell', x: xs[k], y: 110, w: 60, h: 60, label: v, from: { x: 520, y: 110 } }; });
+      if (o.out) n.push({ id: 'q' + o.out, t: 'cell', x: 40, y: 110, w: 60, h: 60, label: o.out, cls: 'bad' });
+      if (items.length) { n.push(lk.tag('front', xs[0], 55, 'FRONT', 'red')); n.push(lk.tag('rear', xs[items.length - 1], 165, 'REAR', 'blue')); }
+      n.push(lk.text('inL', 470, 205, 'join here ←', 'blue', 14, 'end'), lk.text('outL', 10, 205, '← leave here', 'red', 14, 'start'));
+      return { nodes: n, cap: cap };
+    };
+    const orders = function (step, cap) {
+      const xs = lk.xs(3, 46);
+      const row = function (p, vals, y, from) {
+        return vals.map(function (v, k) { return { id: p + v, t: 'cell', x: xs[k], y: y, w: 46, h: 46, label: v, cls: p === 'i' ? '' : 'done', from: from ? { x: xs['ABC'.indexOf(v)], y: 40 } : null }; });
+      };
+      let n = [lk.text('l1', 20, 40, 'IN', 'ink', 13, 'start')].concat(row('i', ['A', 'B', 'C'], 40));
+      if (step >= 1) n = n.concat([lk.text('l2', 20, 115, 'STACK OUT', 'ink', 13, 'start')], row('s', ['C', 'B', 'A'], 115, true));
+      if (step >= 2) n = n.concat([lk.text('l3', 20, 190, 'QUEUE OUT', 'ink', 13, 'start')], row('q', ['A', 'B', 'C'], 190, true));
+      return { nodes: n, cap: cap };
+    };
+    const adt = function (step, cap) {
+      const n = [lk.tag('adt', 240, 30, 'STACK = push · pop · peek', 'yellow', 17)];
+      const e = [];
+      if (step >= 1) {
+        const xs = lk.xs(4, 46);
+        n.push(lk.text('arrL', 20, 100, 'ARRAY', 'ink', 13, 'start'));
+        lk.cells('a', ['A', 'B', 'C', ''], { w: 46, y: 100, x: xs, cls: function (i) { return i === 3 ? 'ghost' : (i === 2 ? 'cur' : ''); } }).forEach(function (c) { n.push(c); });
+        n.push(lk.ptr('tp', xs[2], 128, 'top = 2', 'red'));
+      }
+      if (step >= 2) {
+        n.push(lk.tag('lt', 50, 190, 'TOP', 'red'));
+        ['C', 'B', 'A'].forEach(function (v, k) { n.push({ id: 'l' + v, t: 'll', x: 150 + k * 100, y: 190, w: 70, h: 34, label: v, cls: k === 0 ? 'cur' : '' }); });
+        n.push(lk.tag('nul', 445, 190, 'NULL', 'null'));
+        e.push(lk.arrow('lt', 'lC'), lk.arrow('lC', 'lB', '', { ap: 'next' }), lk.arrow('lB', 'lA', '', { ap: 'next' }), lk.arrow('lA', 'nul', '', { ap: 'next' }));
+      }
+      return { nodes: n, edges: e, cap: cap };
+    };
+    const size = function (k) { return [lk.tag('size', 390, 190, 'SIZE ' + k, '')]; };
+    return [
+      { title: 'Stack: last in, first out', frames: [
+        stack([], 'An empty stack.'),
+        stack(['A'], '`push(A)`'),
+        stack(['A', 'B'], '`push(B)` goes on **top**.'),
+        stack(['A', 'B', 'C'], '`push(C)` goes on **top**.'),
+        stack(['A', 'B'], '`pop()` → **C**. Last in, first out.', { out: 'C' }),
+        stack(['A', 'B'], 'B is the new top.')
+      ] },
+      { title: 'Queue: first in, first out', frames: [
+        queue([], 'An empty queue.'),
+        queue(['A'], '`enqueue(A)`'),
+        queue(['A', 'B'], '`enqueue(B)` joins at the **rear**.'),
+        queue(['A', 'B', 'C'], '`enqueue(C)` joins at the **rear**.'),
+        queue(['B', 'C'], '`dequeue()` → **A**. First in, first out.', { out: 'A' }),
+        queue(['B', 'C'], 'B is the new front.')
+      ] },
+      { title: 'Same input, opposite order', frames: [
+        orders(0, 'Put in A, then B, then C.'),
+        orders(1, 'A stack gives them back **reversed**.'),
+        orders(2, 'A queue keeps the **same** order.')
+      ] },
+      { title: 'ADT = what, not how', frames: [
+        adt(0, 'The ADT says **what** you can do.'),
+        adt(1, '**How** #1: an array + a top index.'),
+        adt(2, '**How** #2: a linked list. Same ADT.')
+      ] },
+      { title: 'peek() only looks', trap: true, frames: [
+        stack(['A', 'B', 'C'], 'A stack of 3.', { extra: size(3) }),
+        stack(['A', 'B', 'C'], '`peek()` → C. It **reads** the top…', { hot: 'C', extra: size(3) }),
+        stack(['A', 'B', 'C'], '…and leaves it there. Still 3.', { extra: size(3) }),
+        stack(['A', 'B'], 'Only `pop()` **removes** it.', { out: 'C', extra: size(2) })
+      ] }
+    ];
+  }
+
   ST.topic({
-    id: 'stackqueue', n: 3, week: 'Week 1', color: 'red', icon: 'stackqueue',
+    id: 'stackqueue', n: 3, color: 'red', icon: 'stackqueue',
     title: 'Stacks & Queues',
     short: 'Two simple ADTs: last in first out, and first in first out.',
     blurb: 'Two ADTs you will see everywhere: in undo buttons, in recursion, in BFS.',
-    remember: [
-      { big: 'STACK = LIFO', text: 'Last in, first out. push and pop at the top.' },
-      { big: 'QUEUE = FIFO', text: 'First in, first out. Join at the rear, leave from the front.' },
-      { big: 'ADT ≠ HOW', text: 'An ADT says what it does. An array or linked list says how.' }
-    ],
     cheat: {
       head: ['', 'Stack', 'Queue'],
       rows: [['Add', 'push (top)', 'enqueue (rear)'], ['Remove', 'pop (top)', 'dequeue (front)'], ['Look', 'peek (top)', 'peek (front)'], ['Order', 'LIFO', 'FIFO'], ['Used in', 'DFS, recursion', 'BFS, scheduling']]
     },
-    mistake: 'peek() only looks. It does not remove the item. pop() and dequeue() remove it.',
+    lesson: lesson(),
+    rules: RULES,
     labs: [
       { id: 'stack', title: 'Stack', tag: 'PLAY', setup: lab('stack') },
       { id: 'queue', title: 'Queue', tag: 'PLAY', setup: lab('queue') }

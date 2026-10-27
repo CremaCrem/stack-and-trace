@@ -1,4 +1,4 @@
-/* World 4 — Linked Lists (Week 3) */
+/* World 4 — Linked Lists */
 (function (ST) {
   'use strict';
   const h = ST.h, U = ST.util, ui = ST.ui;
@@ -342,21 +342,97 @@
     return L;
   }
 
+  // ================================================================ lesson
+  const lk = ST.lk;
+  const RULES = [
+    { rule: 'C# names: Data, Next, head', note: 'From our Node class. Other books say value/next or info/link.' }
+  ];
+  function lesson() {
+    const nd = function (v, x, y, cls) { return { id: 'n' + v, t: 'll', x: x, y: y, w: 70, h: 40, label: v, cls: cls || '' }; };
+    const nx = function (a, b, cls, o) { return lk.arrow('n' + a, 'n' + b, cls, Object.assign({ ap: 'next' }, o)); };
+    const nul = function (x, y, cls) { return Object.assign(lk.tag('nNULL', x, y, 'NULL', 'null'), cls ? { cls: 'null ' + cls } : {}); };
+    // a straight list; cls = { value: cls }
+    const row = function (vals, y, o) {
+      o = o || {};
+      const xs = lk.xs(vals.length + 1, 70, vals.length > 3 ? 24 : 50);
+      const n = vals.map(function (v, k) { return nd(v, xs[k], y, o.cls && o.cls[v]); });
+      n.push(nul(xs[vals.length], y));
+      const e = vals.map(function (v, k) { return nx(v, k + 1 < vals.length ? vals[k + 1] : 'NULL'); });
+      if (o.head) { n.push(lk.tag('head', xs[0], y - 62, 'HEAD', 'yellow')); e.push(lk.arrow('head', 'n' + vals[0])); }
+      return { nodes: n, edges: e, xs: xs };
+    };
+    const walk = function (k, cap) {
+      const r = row([10, 20, 30, 40], 100, { head: true, cls: k >= 0 ? { 10: k === 0 ? 'cur' : 'dim', 20: k === 1 ? 'cur' : (k > 1 ? 'dim' : ''), 30: k === 2 ? 'done' : '' } : {} });
+      if (k >= 0) r.nodes.push(lk.ptr('cur', r.xs[k], 128, 'current', 'red'));
+      return { nodes: r.nodes, edges: r.edges, cap: cap };
+    };
+    // insert C between B and D. step 0: C alone, 1: C→D, 2: B→C, 3: tidy. bad = B changed first
+    const ins = function (step, cap, bad) {
+      if (step === 3) { const r = row(['A', 'B', 'C', 'D'], 90); return { nodes: r.nodes, edges: r.edges, cap: cap }; }
+      const xs = lk.xs(4, 70, 50);
+      const n = [nd('A', xs[0], 80), nd('B', xs[1], 80), nd('D', xs[2], 80, bad && step >= 2 ? 'bad' : ''), nul(xs[3], 80, bad && step >= 1 ? 'dim' : ''), nd('C', 240, 175, 'new')];
+      const e = [nx('A', 'B'), nx('D', 'NULL')];
+      if (bad) {
+        e.push(step >= 1 ? nx('B', 'C', 'hot') : nx('B', 'D'));
+        if (step >= 2) n.push(lk.text('lost', xs[2], 34, 'LOST', 'red', 18));
+      } else {
+        if (step >= 1) e.push(nx('C', 'D', step === 1 ? 'hot' : ''));
+        e.push(step >= 2 ? nx('B', 'C', 'hot') : nx('B', 'D'));
+      }
+      return { nodes: n, edges: e, cap: cap };
+    };
+    const del = function (step, cap) {
+      if (step === 2) { const r = row(['A', 'B', 'D'], 110); return { nodes: r.nodes, edges: r.edges, cap: cap }; }
+      const r = row(['A', 'B', 'C', 'D'], 110, { cls: { C: step ? 'bad' : 'cur' } });
+      if (step === 1) r.edges = r.edges.filter(function (e) { return e.id !== 'nB>nC'; }).concat([nx('B', 'D', 'hot', { bend: -55 })]);
+      return { nodes: r.nodes, edges: r.edges, cap: cap };
+    };
+    const one = { nodes: [nd(10, 240, 115), lk.text('dl', 222, 72, 'DATA', 'blue', 12), lk.text('nl', 272, 72, 'NEXT', 'red', 12)], cap: 'A node: a **value** + an **arrow**.' };
+    const three = row([10, 20, 30], 115);
+    const threeH = row([10, 20, 30], 115, { head: true });
+    return [
+      { title: 'Node = data + next', frames: [
+        one,
+        { nodes: three.nodes, edges: three.edges, cap: 'Arrows chain nodes into a list.' },
+        { nodes: threeH.nodes, edges: threeH.edges, cap: '**HEAD** = the start. **NULL** = the end.' }
+      ] },
+      { title: 'Walk from HEAD', frames: [
+        walk(0, '10? Not 30. Follow **next**.'),
+        walk(1, '20? Follow next.'),
+        walk(2, '**30** found after 3 steps.'),
+        walk(-1, 'No jumping to [i]. Search is **O(n)**.')
+      ] },
+      { title: 'Insert = change 2 arrows', frames: [
+        ins(0, 'Insert **C** after B.'),
+        ins(1, '1) `C.Next = D`'),
+        ins(2, '2) `B.Next = C`'),
+        ins(3, 'Two arrows. **Nothing shifted.**')
+      ] },
+      { title: 'Delete = skip over it', frames: [
+        del(0, 'Delete **C**.'),
+        del(1, '`B.Next = C.Next`: skip it.'),
+        del(2, 'Nothing points to C. **Gone.**')
+      ] },
+      { title: 'Wrong order loses the list', trap: true, frames: [
+        ins(0, 'Insert C. Change B first?', true),
+        ins(1, '`B.Next = C` first…', true),
+        ins(2, '…nothing points to D. **Lost!**', true),
+        ins(1, 'Fix: set `C.Next` **first**.')
+      ] }
+    ];
+  }
+
   ST.topic({
-    id: 'linkedlist', n: 4, week: 'Week 3', color: 'teal', icon: 'linkedlist',
+    id: 'linkedlist', n: 4, color: 'teal', icon: 'linkedlist',
     title: 'Linked Lists',
     short: 'Nodes connected by arrows. Insert and delete by changing arrows.',
     blurb: 'A treasure hunt: each clue card says where the next one is.',
-    remember: [
-      { big: '[ DATA | NEXT ]', text: 'Every node stores a value and an arrow to the next node.' },
-      { big: 'HEAD → … → NULL', text: 'Always start at HEAD. Follow the arrows. NULL means the end.' },
-      { big: 'ARROWS, NOT SHIFTS', text: 'Insert or delete = change 1 or 2 arrows. Nothing slides over.' }
-    ],
     cheat: {
       head: ['Operation', 'Linked list', 'Array'],
       rows: [['Insert at head', 'O(1)', 'O(n)'], ['Insert after a known node', 'O(1)', 'O(n)'], ['Find a value', 'O(n)', 'O(n)'], ['Read the i-th item', 'O(n)', 'O(1)']]
     },
-    mistake: 'When inserting, set newNode.Next first. If you change current.Next first, the rest of the list is lost.',
+    lesson: lesson(),
+    rules: RULES,
     labs: [
       { id: 'ops', title: 'Insert, delete, search', tag: 'TRACE', setup: opsLab },
       { id: 'types', title: 'Singly, doubly, circular', tag: 'TRACE', setup: typesLab }

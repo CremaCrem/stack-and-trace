@@ -1,4 +1,4 @@
-/* World 12 — Greedy algorithms (Week 14) */
+/* World 12 — Greedy algorithms */
 (function (ST) {
   'use strict';
   const h = ST.h, U = ST.util, ui = ST.ui;
@@ -354,21 +354,124 @@
     return L;
   }
 
+  // ================================================================ lesson
+  const lk = ST.lk;
+  const RULES = [
+    { rule: 'Huffman: smaller goes left, left = 0', note: 'Ties go to whichever entered the pool first. Other conventions give different codes, same total length.' }
+  ];
+  function lesson() {
+    // coins in a row; o: { cls }
+    const coins = function (id, list, y, cls) {
+      const xs = lk.xs(Math.max(1, list.length), 50, 10);
+      return list.map(function (c, k) { return { id: id + k, x: xs[k], y: y, r: 24, label: c, cls: cls || 'cur', from: { x: 440, y: 30 } }; });
+    };
+    const change = function (list, left, cap) {
+      return { cap: cap, nodes: [lk.tag('goal', 60, 30, 'MAKE 41', 'yellow'), lk.tag('left', 420, 30, left + ' LEFT', left ? '' : 'teal')].concat(coins('c', list, 120)) };
+    };
+    const trap = function (step, cap) {
+      let n = [lk.tag('goal', 150, 26, 'COINS 1, 3, 4 · MAKE 6', 'yellow')];
+      if (step >= 1) n = n.concat([lk.text('gl', 20, 90, 'GREEDY', 'ink', 13, 'start')], coins('g', [4, 1, 1], 90, step >= 2 ? 'bad' : 'cur'));
+      if (step >= 2) n = n.concat([lk.text('bl', 20, 170, 'BEST', 'ink', 13, 'start')], coins('b', [3, 3], 170, 'done'));
+      return { nodes: n, cap: cap };
+    };
+    // activities [name, start, finish], already sorted by finish
+    const ACTS = [['A', 1, 4], ['B', 3, 5], ['C', 0, 6], ['D', 5, 7], ['E', 3, 9], ['F', 5, 9], ['G', 6, 10], ['H', 8, 11]];
+    const TX = function (t) { return 30 + t * 38; };
+    const acts = function (cls, cap) {
+      return { cap: cap, nodes: ACTS.map(function (a, k) {
+        return { id: 'a' + a[0], t: 'cell', x: (TX(a[1]) + TX(a[2])) / 2, y: 20 + k * 25, w: (a[2] - a[1]) * 38 - 4, h: 21, label: a[0] + '  ' + a[1] + '–' + a[2], fs: 12, cls: cls[a[0]] || '' };
+      }) };
+    };
+    const pick = function (chosen, gone, cur) {
+      const c = {};
+      gone.split('').forEach(function (v) { c[v] = 'dim'; });
+      chosen.split('').forEach(function (v) { c[v] = 'done'; });
+      if (cur) c[cur] = 'cur';
+      return c;
+    };
+    // knapsack: cap 50 kg. items fill the bag from the bottom
+    const ITEMS = [['GOLD', 10, 60, 's-yellow'], ['SILVER', 20, 100, 's-sky'], ['BRONZE', 30, 120, 's-orange']];
+    const knap = function (taken, cap) {
+      const n = [{ id: 'bag', t: 'box', x: 360, y: 118, w: 120, h: 172, label: 'BAG 50 kg', cls: 'clear' }];
+      let used = 0, value = 0;
+      ITEMS.forEach(function (it, k) {
+        const kg = taken[k] || 0;
+        const ratio = it[2] / it[1];
+        n.push({ id: 'i' + k, t: 'box', x: 115, y: 50 + k * 60, w: 190, h: 46, label: it[0] + ' ' + it[1] + 'kg $' + it[2], cls: (kg ? 'clear' : it[3]) });
+        n.push(lk.text('r' + k, 115, 59 + k * 60, '$' + ratio + ' / kg', kg ? 'ink' : 'pix', 16));
+        if (kg) { n.push({ id: 'b' + k, t: 'box', x: 360, y: 204 - used * 3.44 - kg * 1.72, w: 110, h: kg * 3.44, label: (kg < it[1] ? kg + ' of ' : '') + it[0], cls: it[3] }); used += kg; value += kg * ratio; }
+      });
+      n.push(lk.tag('val', 360, 16, 'VALUE $' + value, value ? 'teal' : ''));
+      return { nodes: n, cap: cap };
+    };
+    // Huffman: forest laid out side by side, roots on top
+    const huff = function (forest, cap, hot) {
+      const n = [], e = [];
+      let slot = 0;
+      const place = function (t, d) {
+        let x;
+        if (!t.l) { x = 50 + slot * 100; slot++; }
+        else { const a = place(t.l, d + 1), b = place(t.r, d + 1); x = (a + b) / 2; e.push({ id: t.id + 'l', a: t.id, b: t.l.id, w: '0' }, { id: t.id + 'r', a: t.id, b: t.r.id, w: '1' }); }
+        n.push({ id: t.id, x: x, y: 30 + d * 55, r: 20, label: t.ch ? t.ch + ':' + t.f : t.f, fs: t.ch ? 14 : 16, cls: hot && hot.indexOf(t.id) >= 0 ? 'cur' : (t.ch ? '' : 'wait') });
+        return x;
+      };
+      forest.forEach(function (t) { place(t, 0); slot += 0.3; });
+      return { nodes: n, edges: e, cap: cap };
+    };
+    const A = { id: 'A', ch: 'A', f: 1 }, B = { id: 'B', ch: 'B', f: 2 }, C = { id: 'C', ch: 'C', f: 3 }, D = { id: 'D', ch: 'D', f: 5 };
+    const N3 = { id: 'N3', f: 3, l: A, r: B }, N6 = { id: 'N6', f: 6, l: C, r: N3 }, N11 = { id: 'N11', f: 11, l: D, r: N6 };
+    return [
+      { title: 'Take the best now, never undo', frames: [
+        change([], 41, 'Make 41¢ with 25, 10, 5, 1.'),
+        change([25], 16, 'Biggest coin that fits: **25**.'),
+        change([25, 10], 6, 'Then **10**.'),
+        change([25, 10, 5], 1, 'Then **5**.'),
+        change([25, 10, 5, 1], 0, 'Then **1**. Done: 4 coins.')
+      ] },
+      { title: 'Best now ≠ best overall', trap: true, frames: [
+        trap(0, 'New coins. Make 6.'),
+        trap(1, 'Greedy: 4, then 1, then 1 = **3 coins**.'),
+        trap(2, 'But 3 + 3 = **2 coins**. Greedy lost.')
+      ] },
+      { title: 'Activities: earliest finish', frames: [
+        acts({}, 'One room. Fit the **most** activities.'),
+        acts(pick('', '', 'A'), 'Earliest finish: **A** (ends at 4).'),
+        acts(pick('A', 'BCE'), 'Drop all that overlap A.'),
+        acts(pick('A', 'BCE', 'D'), 'Next earliest finish: **D** (ends at 7).'),
+        acts(pick('AD', 'BCEFG'), 'Drop the overlaps again.'),
+        acts(pick('AD', 'BCEFG', 'H'), 'Then **H**.'),
+        acts(pick('ADH', 'BCEFG'), '3 activities: the most possible.')
+      ] },
+      { title: 'Knapsack: best value per kg', frames: [
+        knap([], 'Fill a 50 kg bag. Best **$ per kg** first.'),
+        knap([10], 'Gold: $6/kg. Take it all.'),
+        knap([10, 20], 'Silver: $5/kg. Take it all.'),
+        knap([10, 20, 20], 'Bronze: only 20 kg fit. Take **part**.'),
+        knap([10, 20, 20], 'Can\'t cut items (0/1)? Then greedy can **fail**.')
+      ] },
+      { title: 'Huffman: join the 2 smallest', frames: [
+        huff([A, B, C, D], 'Letters with their counts.'),
+        huff([A, B, C, D], 'Two smallest: **A:1** and **B:2**.', ['A', 'B']),
+        huff([C, N3, D], 'Join them: 1 + 2 = **3**.', ['N3']),
+        huff([C, N3, D], 'Two smallest: C:3 and 3.', ['C', 'N3']),
+        huff([D, N6], 'Join: **6**.', ['N6']),
+        huff([N11], 'Join D: **11**. Left = 0, right = 1.', ['N11']),
+        huff([N11], 'D = 0, C = 10, A = 110, B = 111. Common = **short**.')
+      ] }
+    ];
+  }
+
   ST.topic({
-    id: 'greedy', n: 12, week: 'Week 14', color: 'red', icon: 'greedy',
+    id: 'greedy', n: 12, color: 'red', icon: 'greedy',
     title: 'Greedy Algorithms',
     short: 'Take the best choice now and never go back. Sometimes it works.',
     blurb: 'One best step at a time. Fast and simple — but not always right.',
-    remember: [
-      { big: 'BEST NOW, NO UNDO', text: 'A greedy algorithm takes the best choice right now and never takes it back.' },
-      { big: 'LOCAL ≠ GLOBAL', text: 'Best now is not always best overall. Coins 1, 3, 4 for 6 prove it.' },
-      { big: 'SAME LOOP', text: 'Huffman, activities, knapsack: same loop, different "best".' }
-    ],
     cheat: {
       head: ['Problem', 'Greedy choice', 'Optimal?'],
       rows: [['Huffman coding', 'Join the 2 least frequent', 'Yes'], ['Activity selection', 'Earliest finish', 'Yes'], ['Fractional knapsack', 'Best value per kg', 'Yes'], ['0/1 knapsack', 'Best value per kg', 'No'], ['Coin change', 'Biggest coin', 'Depends on coins']]
     },
-    mistake: 'Greedy is not a shortcut for every problem. Always check: can a "best right now" choice block a better answer later?',
+    lesson: lesson(),
+    rules: RULES,
     labs: [
       { id: 'coins', title: 'Coin change', tag: 'TRACE', setup: coinLab },
       { id: 'activities', title: 'Activity selection', tag: 'TRACE', setup: actLab },

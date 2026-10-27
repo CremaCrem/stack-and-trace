@@ -1,4 +1,4 @@
-/* World 10 — Graphs, BFS and DFS (Week 12) — follows the class whiteboard method */
+/* World 10 — Graphs, BFS and DFS */
 (function (ST) {
   'use strict';
   const h = ST.h, U = ST.util, ui = ST.ui, K = ST.kit;
@@ -289,21 +289,104 @@
     return L;
   }
 
+  // ================================================================ lesson
+  const lk = ST.lk;
+  const RULES = [
+    { rule: 'Start at A', note: 'BFS and DFS can start at any vertex.' },
+    { rule: 'Check neighbors in A–Z order', note: 'Any order is correct. A fixed order gives everyone the same answer.' },
+    { rule: 'BFS: solid circle = dequeued, dashed = waiting', note: 'Our whiteboard notation, plus L0, L1… level labels.' },
+    { rule: 'DFS: stop once every vertex is visited', note: 'The leftover pops still happen. We just do not draw them.' }
+  ];
+  function lesson() {
+    const byName = function (v) { return GRAPHS.filter(function (x) { return x.v === v; })[0]; };
+    const gOf = function (v) { const p = byName(v); return makeGraph(p, p.edges); };
+    const strip = function (title, items) {
+      return [lk.text('dsL', 20, 228, title, 'ink', 13, 'start')].concat(items.map(function (it, k) {
+        return { id: 'ds' + it.v, t: 'cell', x: 110 + k * 42, y: 228, w: 36, h: 30, label: it.v, fs: 15, cls: it.cls || '', from: { x: 110 + k * 42, y: 270 } };
+      }));
+    };
+    const curOf = function (f) { return Object.keys(f.cls).filter(function (v) { return f.cls[v] === 'cur'; })[0]; };
+    // BFS on the class example, one frame per dequeue
+    const g1 = gOf('sample'), sp1 = scalePos(g1.pos, 480, 200);
+    const bfsAll = bfsFrames(g1, 'A').filter(function (f) { return !f.ask; });
+    const bfs = bfsAll.map(function (f, k) {
+      const gn = graphNodes(g1, f, sp1, { dimRest: f.final });
+      const prevQ = k ? bfsAll[k - 1].queue.map(function (q) { return q.v; }) : [];
+      const fresh = f.queue.filter(function (q) { return prevQ.indexOf(q.v) < 0; });
+      const cur = curOf(f);
+      let cap = 'Start at **A**: level 0. Into the queue.';
+      if (f.final) cap = 'Queue empty. BFS order: **' + f.visitOrder.join(' ') + '**.';
+      else if (k) cap = cur + ' is out. ' + (fresh.length ? 'Add **' + fresh.map(function (q) { return q.v; }).join(', ') + '** (' + fresh[0].tag + ').' : 'Nothing new.');
+      return { nodes: gn.nodes.concat(strip('QUEUE', f.queue.map(function (q, j) { return { v: q.v, cls: j ? 'wait' : 'wait cur' }; }))), edges: gn.edges, cap: cap };
+    });
+    // DFS on a tree-shaped graph, so the dead ends show
+    const br = byName('branches');
+    const g2 = makeGraph({ pos: Object.assign({}, br.pos, { C: [8, 40], D: [36, 40], H: [52, 64] }) }, br.edges), sp2 = scalePos(g2.pos, 480, 200);
+    const dfsAll = dfsFrames(g2, 'A');
+    const dfs = dfsAll.map(function (f, k) {
+      const gn = graphNodes(g2, f, sp2, { dimRest: f.final });
+      let cap = 'Start at **A**. Visit it, push it.';
+      if (f.final) cap = 'All visited: **stop**. Order: **' + f.order.join(' ') + '**.';
+      else if (f.ask) cap = 'Go deeper: visit **' + f.ask.pick + '**, push.';
+      else if (k) cap = 'Dead end at ' + dfsAll[k - 1].stack[dfsAll[k - 1].stack.length - 1] + ' → **pop**, go back.';
+      return { nodes: gn.nodes.concat(strip('STACK', f.stack.map(function (v, j) { return { v: v, cls: j === f.stack.length - 1 ? 'cur' : 'wait' }; }))), edges: gn.edges, cap: cap };
+    });
+    const basic = function (step, cap) {
+      const f = { cls: {}, ecls: {} };
+      if (step === 2) { f.cls = { A: 'cur', B: 'wait', C: 'wait' }; f.ecls = { 'A-B': 'look', 'A-C': 'look' }; }
+      const gn = graphNodes(g1, f, scalePos(g1.pos, 480, 220));
+      return { nodes: gn.nodes, edges: step ? gn.edges : [], cap: cap };
+    };
+    const spL = scalePos(g1.pos, 300, 220);
+    const adj = function (hot, cap) {
+      const f = { cls: {}, ecls: {} };
+      hot.forEach(function (v) { f.cls[v] = 'cur'; g1.adj[v].forEach(function (x) { f.ecls[K.eid(v, x.v)] = 'look'; }); });
+      const gn = graphNodes(g1, f, spL);
+      g1.verts.forEach(function (v, k) {
+        gn.nodes.push(lk.text('row' + v, 340, 28 + k * 33, v + ':  ' + g1.adj[v].map(function (x) { return x.v; }).join('  '), hot.indexOf(v) >= 0 ? 'red' : 'ink', 17, 'start'));
+      });
+      return { nodes: gn.nodes, edges: gn.edges, cap: cap };
+    };
+    const g3 = gOf('close'), sp3 = scalePos(g3.pos, 480, 220);
+    const last3 = bfsFrames(g3, 'A').pop();
+    const close = function (step, cap) {
+      const f = step ? Object.assign({}, last3, { cls: { A: 'cur', F: 'bad' }, ring: {}, ecls: {} }) : { cls: { A: 'cur', F: 'wait' }, ecls: {} };
+      if (step === 2) 'A-B B-C C-D D-E E-F'.split(' ').forEach(function (e) { f.ecls[e] = 'path'; });
+      const gn = graphNodes(g3, f, sp3);
+      return { nodes: gn.nodes, edges: gn.edges, cap: cap };
+    };
+    return [
+      { title: 'Vertices + edges', frames: [
+        basic(0, 'Vertices: the **things**.'),
+        basic(1, 'Edges: the **links** between them.'),
+        basic(2, 'A\'s **neighbors**: B and C.')
+      ] },
+      { title: 'BFS: ripple out by level', vb: [480, 250], frames: bfs },
+      { title: 'DFS: go deep, then back up', vb: [480, 250], frames: dfs },
+      { title: 'Store it as a list', vb: [560, 220], frames: [
+        adj(['A'], 'Each vertex keeps a list of its **neighbors**.'),
+        adj(['D'], 'D: B, C, F.'),
+        adj(['D', 'F'], 'Each edge is listed **twice**: D has F, F has D.')
+      ] },
+      { title: 'Close on screen ≠ close', trap: true, frames: [
+        close(0, 'F is drawn **right next to** A…'),
+        close(1, '…but BFS finds F at **level 5**.'),
+        close(2, 'Level = edges from A, not distance on screen.')
+      ] }
+    ];
+  }
+
   ST.topic({
-    id: 'graphs', n: 10, week: 'Week 12', color: 'yellow', icon: 'graphs', now: true,
+    id: 'graphs', n: 10, color: 'yellow', icon: 'graphs',
     title: 'Graphs: BFS & DFS',
     short: 'Explore a graph level by level (BFS) or deep first (DFS) — the whiteboard way.',
     blurb: 'Two ways to explore every vertex. Same graph, different order.',
-    remember: [
-      { big: 'BFS = QUEUE', text: 'Visit level by level. Solid circle = dequeued. Dashed = waiting.' },
-      { big: 'DFS = STACK', text: 'Go deep. Push when you visit. Pop at a dead end.' },
-      { big: 'START A · A–Z', text: 'Class rule: start at A and check neighbors in alphabetical order.' }
-    ],
     cheat: {
       head: ['', 'BFS', 'DFS'],
       rows: [['Uses', 'Queue (FIFO)', 'Stack (LIFO)'], ['Order', 'Level by level', 'Deep first, then back up'], ['Class example', 'A B C D E F', 'A B D C E F'], ['Finds', 'Fewest edges to each vertex', 'A path; full exploration'], ['Time', 'O(V + E)', 'O(V + E)']]
     },
-    mistake: 'A vertex\'s BFS level is decided when it is first found, not by where it is drawn. Check the "Looks close, is far" graph.',
+    lesson: lesson(),
+    rules: RULES,
     labs: [
       { id: 'bfs', title: 'BFS (whiteboard)', tag: 'TRACE', setup: travLab('bfs') },
       { id: 'dfs', title: 'DFS (whiteboard)', tag: 'TRACE', setup: travLab('dfs') },

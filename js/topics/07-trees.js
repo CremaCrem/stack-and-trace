@@ -1,4 +1,4 @@
-/* World 7 — Trees, BST, traversals, AVL (Week 7) */
+/* World 7 — Trees, BST, traversals, AVL */
 (function (ST) {
   'use strict';
   const h = ST.h, U = ST.util, ui = ST.ui, K = ST.kit;
@@ -361,21 +361,91 @@
     return L;
   }
 
+  // ================================================================ lesson
+  const lk = ST.lk;
+  const RULES = [
+    { rule: 'Empty subtree height = 0', note: 'So a leaf has height 1. Many books use −1 (a leaf is 0). BF comes out the same.' },
+    { rule: 'Write (HL, HR) above each node', note: 'BF = HL − HR. Our whiteboard habit, not part of AVL.' }
+  ];
+  function lesson() {
+    const P = { 50: [240, 32], 30: [130, 92], 70: [350, 92], 20: [75, 152], 40: [185, 152], 60: [295, 152], 80: [405, 152] };
+    const PAR = { 30: 50, 70: 50, 20: 30, 40: 30, 60: 70, 80: 70 };
+    const ALL = [50, 30, 70, 20, 40, 60, 80];
+    // o: { cls: {v: cls}, path: [v...] (edges into these are gold), badge: {v: text}, extra: [] }
+    const tree = function (vals, cap, o) {
+      o = o || {};
+      const n = vals.map(function (v) { return { id: 't' + v, x: P[v][0], y: P[v][1], r: 20, label: v, cls: (o.cls && o.cls[v]) || '', badge: o.badge && o.badge[v], from: { x: 240, y: 32 } }; });
+      const e = vals.filter(function (v) { return PAR[v]; }).map(function (v) { return { id: 'e' + v, a: 't' + PAR[v], b: 't' + v, cls: o.path && o.path.indexOf(v) >= 0 ? 'path' : '' }; });
+      return { nodes: n.concat(o.extra || []), edges: e, cap: cap };
+    };
+    const IN = [20, 30, 40, 50, 60, 70, 80];
+    const inCaps = ['In-order: **Left, Node, Right**.', 'Far left first: **20**.', 'Then its node: **30**.', 'Then its right: **40**.', 'Left side done → root **50**.', 'Right side: **60**…', '…70…', '…80. Out comes **sorted** order!'];
+    const inorder = inCaps.map(function (cap, k) {
+      const cls = {}, badge = {}, xs = lk.xs(7, 34, 8);
+      const strip = [];
+      IN.slice(0, k).forEach(function (v, j) {
+        cls[v] = j === k - 1 ? 'cur' : 'done'; badge[v] = '#' + (j + 1);
+        strip.push({ id: 'o' + v, t: 'cell', x: xs[j], y: 200, w: 34, h: 28, label: v, fs: 15, cls: 'done', from: { x: P[v][0], y: P[v][1] } });
+      });
+      return tree(ALL, cap, { cls: cls, badge: badge, extra: strip });
+    });
+    const S = { 10: [100, 30], 20: [180, 75], 30: [260, 120], 40: [340, 165] };
+    const stick = function (k, cap, bad) {
+      const vals = [10, 20, 30, 40].slice(0, k);
+      return { cap: cap, nodes: vals.map(function (v) { return { id: 's' + v, x: S[v][0], y: S[v][1], r: 20, label: v, cls: bad ? 'bad' : '', from: { x: 100, y: 30 } }; }),
+        edges: vals.slice(1).map(function (v) { return { id: 'se' + v, a: 's' + (v - 10), b: 's' + v }; }) };
+    };
+    const avl = function (rot, cap, hot) {
+      const pos = rot ? { 10: [140, 135], 20: [240, 45], 30: [340, 135] } : { 10: [140, 40], 20: [240, 100], 30: [340, 160] };
+      const top = rot ? { 10: '(0,0)', 20: '(1,1)', 30: '(0,0)' } : { 10: '(0,2)', 20: '(0,1)', 30: '(0,0)' };
+      const bf = rot ? { 10: '0', 20: '0', 30: '0' } : { 10: '−2', 20: '−1', 30: '0' };
+      return { cap: cap, nodes: [10, 20, 30].map(function (v) {
+        return { id: 'a' + v, x: pos[v][0], y: pos[v][1], r: 22, label: v, top: top[v], badge: bf[v], badgeCls: !rot && v === 10 ? 'b-red' : 'b-teal', cls: hot && v === 10 ? 'bad' : (rot ? 'done' : '') };
+      }), edges: [{ id: 'x1', a: 'a10', b: 'a20' }, { id: 'x2', a: 'a20', b: 'a30' }] };
+    };
+    return [
+      { title: 'Smaller left, bigger right', frames: [
+        tree([50], 'Start: **50** is the root.'),
+        tree([50, 30], '30 < 50 → go **left**.', { cls: { 30: 'cur' } }),
+        tree([50, 30, 70], '70 > 50 → go **right**.', { cls: { 70: 'cur' } }),
+        tree([50, 30, 70, 20], '20: left of 50, left of 30.', { cls: { 20: 'cur' }, path: [30, 20] }),
+        tree([50, 30, 70, 20, 40], '40: left of 50, **right** of 30.', { cls: { 40: 'cur' }, path: [30, 40] })
+      ] },
+      { title: 'Search = one path down', frames: [
+        tree(ALL, 'Find **40**.'),
+        tree(ALL, '40 < 50 → left.', { cls: { 50: 'cur' } }),
+        tree(ALL, '40 > 30 → right.', { cls: { 50: 'wait', 30: 'cur' }, path: [30] }),
+        tree(ALL, 'Found in **3** checks, not 7.', { cls: { 50: 'wait', 30: 'wait', 40: 'done' }, path: [30, 40] }),
+        tree(ALL, 'One path down: **O(height)**.', { cls: { 40: 'done' }, path: [30, 40] })
+      ] },
+      { title: 'In-order = sorted', vb: [480, 222], frames: inorder },
+      { title: 'Sorted input makes a stick', trap: true, frames: [
+        stick(1, '10 is the root.'),
+        stick(2, '20 > 10 → right.'),
+        stick(3, '30 → right again.'),
+        stick(4, '40 → right again…'),
+        stick(4, 'A **stick**: search is **O(n)**.', true)
+      ] },
+      { title: 'AVL: rotate to balance', frames: [
+        avl(false, 'Insert 10, 20, 30. **(HL, HR)** on top.'),
+        avl(false, 'BF(10) = 0 − 2 = **−2**. Too tall!', true),
+        avl(true, 'Rotate **left** at 10: 20 goes up.'),
+        avl(true, 'Every BF is −1, 0 or +1. **Balanced.**')
+      ] }
+    ];
+  }
+
   ST.topic({
-    id: 'trees', n: 7, week: 'Week 7', color: 'teal', icon: 'trees',
+    id: 'trees', n: 7, color: 'teal', icon: 'trees',
     title: 'Trees, BST & AVL',
     short: 'Build a BST, walk it four ways, and balance it with rotations.',
     blurb: 'Data in a hierarchy: one root on top, branches below.',
-    remember: [
-      { big: 'LEFT < NODE < RIGHT', text: 'BST rule. It is used to insert and to search.' },
-      { big: 'IN-ORDER = SORTED', text: 'Left, Node, Right on a BST always gives sorted values.' },
-      { big: 'BF ∈ {−1, 0, +1}', text: 'AVL: if a balance factor leaves this range, rotate.' }
-    ],
     cheat: {
       head: ['Traversal', 'Order', 'On 50 30 70 20 40 60 80'],
       rows: [['Pre-order', 'Node, Left, Right', '50 30 20 40 70 60 80'], ['In-order', 'Left, Node, Right', '20 30 40 50 60 70 80'], ['Post-order', 'Left, Right, Node', '20 40 30 60 80 70 50'], ['Level-order', 'Level by level', '50 30 70 20 40 60 80']]
     },
-    mistake: 'A balanced BST searches in O(log n), but inserting sorted values makes a "stick" with O(n) search. AVL rotations prevent that.',
+    lesson: lesson(),
+    rules: RULES,
     labs: [
       { id: 'bst', title: 'BST insert & search', tag: 'TRACE', setup: bstLab },
       { id: 'traversal', title: 'Traversals', tag: 'TRACE', setup: travLab },

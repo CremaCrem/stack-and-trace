@@ -1,4 +1,4 @@
-/* World 11 — Weighted graphs: Dijkstra, Bellman-Ford, Prim, Kruskal (Week 13) */
+/* World 11 — Weighted graphs: Dijkstra, Bellman-Ford, Prim, Kruskal */
 (function (ST) {
   'use strict';
   const h = ST.h, U = ST.util, ui = ST.ui, K = ST.kit;
@@ -90,7 +90,7 @@
         F.push(f);
       });
       final[u] = true;
-      F.push(snap({ cap: '**' + u + '** is done. Its distance ' + fmt(dist[u]) + ' is final.', hotV: u }));
+      F.push(snap({ cap: '**' + u + '** is done. Its distance ' + fmt(dist[u]) + ' is final.', hotV: u, doneV: u }));
     }
     const bad = F.some(function (fr) { return fr.wrong; });
     F.push(snap({ cap: bad ? 'Dijkstra finished, but with a negative edge its answer can be **wrong**. Try Bellman-Ford on this graph.' : 'All done. Gold edges = the shortest routes from ' + def.start + '. Badges = final distances.', mood: bad ? 'oops' : 'happy', dimRest: !bad }));
@@ -330,21 +330,76 @@
     return L;
   }
 
+  // ================================================================ lesson
+  const lk = ST.lk;
+  const RULES = [
+    { rule: 'Ties: A–Z order', note: 'When two choices cost the same, take the vertex or edge that comes first alphabetically.' },
+    { rule: "Prim's starts at A", note: 'Any start gives an MST with the same total.' }
+  ];
+  function lesson() {
+    const P = ST.graphKit.scalePos(GW.pos, 480, 220);
+    const gw = K.graph(GW);
+    // f: { cls, badge, badgeCls, ecls, dim }
+    const pic = function (f, cap) {
+      return { cap: cap,
+        nodes: gw.verts.map(function (v) { return { id: v, x: P[v][0], y: P[v][1], r: 22, label: v, cls: (f.cls && f.cls[v]) || '', badge: f.badge && f.badge[v], badgeCls: f.badgeCls && f.badgeCls[v] }; }),
+        edges: gw.edges.map(function (e) { return { id: eid(e), a: e.a, b: e.b, w: e.w, wfs: 15, cls: (f.ecls && f.ecls[eid(e)]) || (f.dim ? 'dim' : '') }; }) };
+    };
+    const ec = function (list, cls, base) {
+      const o = Object.assign({}, base);
+      list.split(' ').forEach(function (id) { if (id) o[id] = cls; });
+      return o;
+    };
+    const dist = function (d) { const b = {}; 'ABCDE'.split('').forEach(function (v, k) { b[v] = d[k] === null ? '∞' : String(d[k]); }); return b; };
+    const dij = dijkstraFrames(GW).frames.filter(function (f, k, all) { return k === 0 || f.doneV || k === all.length - 1; });
+    const dijk = dij.map(function (f, k) {
+      const cap = k === 0 ? 'A = 0. Everyone else **∞**.' : (f.doneV ? 'Closest left: **' + f.doneV + '** (' + f.dist[f.doneV] + '). Lock it in.' : 'Gold = the cheapest route to each vertex.');
+      return pic(Object.assign({}, f, { dim: k === dij.length - 1 }), cap);
+    });
+    const MST = 'B-C A-C D-E B-D';
+    const kr = function (n, cap, extra) { return pic({ ecls: Object.assign(ec(MST.split(' ').slice(0, n).join(' '), 'tree'), extra || {}), dim: n === 4 && !extra }, cap); };
+    return [
+      { title: 'Edges have costs', frames: [
+        pic({}, 'Each edge has a **cost** (time, km, money).'),
+        pic({ ecls: ec('A-B', 'path'), cls: { B: 'cur' } }, 'A → B straight: **4**.'),
+        pic({ ecls: ec('A-C B-C', 'path'), cls: { B: 'cur' } }, 'A → C → B: 2 + 1 = **3**. More edges, cheaper!')
+      ] },
+      { title: 'Relax: found a cheaper way', frames: [
+        pic({ badge: dist([0, null, null, null, null]), cls: { A: 'cur' } }, 'Start: A = 0. The rest **∞**.'),
+        pic({ badge: dist([0, 4, 2, null, null]), ecls: ec('A-B A-C', 'look'), cls: { A: 'cur' } }, 'From A: B = 4, C = 2.'),
+        pic({ badge: dist([0, 3, 2, null, null]), badgeCls: { B: 'b-red' }, ecls: ec('B-C', 'hot'), cls: { C: 'cur', B: 'wait' } }, 'Via C: 2 + 1 = 3 < 4 → **update** B.'),
+        pic({ badge: dist([0, 3, 2, null, null]), cls: { B: 'wait' } }, 'That update is called **relaxing**.')
+      ] },
+      { title: 'Dijkstra: lock in the closest', frames: dijk },
+      { title: 'MST: cheapest edges, no cycle', frames: [
+        kr(0, 'Sort edges: 1, 2, 3, 4, 5, 7, 8.'),
+        kr(1, 'Take **B–C (1)**.'),
+        kr(2, 'Take **A–C (2)**.'),
+        kr(3, 'Take **D–E (3)**.'),
+        kr(3, 'A–B (4) closes a **cycle** → skip.', { 'A-B': 'hot dash' }),
+        kr(4, 'Take **B–D (5)**. That is V − 1 = 4 edges.', { 'A-B': 'dim dash' }),
+        kr(4, 'Every vertex joined. Total **11**.')
+      ] },
+      { title: 'MST ≠ shortest path', trap: true, frames: [
+        pic({ ecls: ec(MST, 'tree'), dim: true }, 'The MST of this graph.'),
+        pic({ ecls: ec('A-C B-C B-D D-E', 'path'), cls: { E: 'cur' }, dim: true }, 'In the MST, A → E costs **11**.'),
+        pic({ ecls: ec('A-C C-E', 'path'), cls: { E: 'done' }, dim: true }, 'Shortest A → C → E: just **9**.'),
+        pic({ ecls: ec(MST, 'tree'), dim: true }, 'MST = cheapest **network**, not cheapest **route**.')
+      ] }
+    ];
+  }
+
   ST.topic({
-    id: 'weighted', n: 11, week: 'Week 13', color: 'teal', icon: 'weighted',
+    id: 'weighted', n: 11, color: 'teal', icon: 'weighted',
     title: 'Shortest Paths & MST',
     short: 'Dijkstra, Bellman-Ford, Prim and Kruskal on weighted graphs.',
     blurb: 'When every edge has a cost: the cheapest route, and the cheapest network.',
-    remember: [
-      { big: 'RELAX: d[u] + w < d[v]', text: 'If going through u is cheaper, update v. Both shortest-path algorithms do this.' },
-      { big: 'DIJKSTRA ≠ NEGATIVE', text: 'Dijkstra needs weights ≥ 0. Bellman-Ford allows negatives and finds negative cycles.' },
-      { big: 'MST = V − 1 EDGES', text: 'Connect every vertex with the smallest total. No cycles.' }
-    ],
     cheat: {
       head: ['Algorithm', 'Question', 'Key move'],
       rows: [['Dijkstra', 'Cheapest route', 'Process the closest vertex'], ['Bellman-Ford', 'Cheapest route (negatives OK)', 'Relax all edges V − 1 times'], ["Prim's", 'Cheapest network', 'Cheapest crossing edge'], ["Kruskal's", 'Cheapest network', 'Cheapest edge with no cycle']]
     },
-    mistake: 'An MST is not a shortest-path map. In graph W the MST route A to E costs 11, but the shortest path A → C → E costs 9.',
+    lesson: lesson(),
+    rules: RULES,
     labs: [
       { id: 'dijkstra', title: 'Dijkstra', tag: 'TRACE', setup: dijkstraLab },
       { id: 'bellman', title: 'Bellman-Ford', tag: 'TRACE', setup: bellmanLab },

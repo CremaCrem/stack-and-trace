@@ -1,4 +1,4 @@
-/* World 2 — Searching: linear and binary search (Week 2) */
+/* World 2 — Searching: linear and binary search */
 (function (ST) {
   'use strict';
   const h = ST.h, U = ST.util, ui = ST.ui;
@@ -205,16 +205,80 @@
     return L;
   }
 
+  // ================================================================ lesson
+  const lk = ST.lk;
+  const RULES = [
+    { rule: 'mid = low + (high − low) / 2, rounded down', note: 'Integer division, as in C#. Rounding up also works, but the steps change.' }
+  ];
+  function lesson() {
+    const L1 = [8, 3, 6, 1, 9, 4, 7];
+    const lin = function (k, cap) {
+      return { cap: cap, nodes: lk.cells('c', L1, { w: 52, y: 120, top: function (i) { return '[' + i + ']'; },
+        cls: function (i) { return k < 0 ? 'wait' : i === k ? (L1[i] === 9 ? 'done' : 'cur') : (i < k ? 'dim' : ''); } })
+        .concat([lk.tag('find', 60, 30, 'FIND 9', 'yellow')]) };
+    };
+    // one binary-search picture: range lo..hi, mid, optional bad index
+    const bs = function (arr, find, lo, hi, mid, cap, o) {
+      o = o || {};
+      const n = arr.length, w = n > 8 ? 38 : 52, gap = n > 8 ? 4 : 6;
+      const xs = lk.xs(n, w, gap);
+      const nodes = lk.cells('b', arr, { w: w, gap: gap, y: 110, fs: n > 8 ? 16 : undefined, cls: function (i) {
+        if (i === o.bad) return 'bad';
+        if (i === mid) return o.found ? 'done' : 'cur';
+        return i < lo || i > hi ? 'dim' : '';
+      } });
+      nodes.push(lk.tag('find', 60, 24, 'FIND ' + find, 'yellow'));
+      if (mid >= 0) nodes.push(lk.ptr('M', xs[mid], 110 - w / 2 - 5, 'MID', 'red', true));
+      if (lo === hi) nodes.push(lk.ptr('L', xs[lo], 110 + w / 2 + 5, 'LOW = HIGH', 'blue'));
+      else if (lo < hi) {
+        nodes.push(lk.ptr('L', xs[lo], 110 + w / 2 + 5, 'LOW', 'blue'));
+        nodes.push(lk.ptr('H', xs[hi], 110 + w / 2 + 5, 'HIGH', 'blue'));
+      }
+      return { nodes: nodes, cap: cap };
+    };
+    const B = [2, 5, 8, 12, 16, 23, 38, 45, 56, 72, 91];
+    const U2 = [9, 2, 7, 1, 8, 3, 5];
+    const halve = function (n, cap) {
+      const bn = Math.ceil(Math.log2(n));
+      return { cap: cap, nodes: [
+        lk.tag('n', 400, 40, 'n = ' + n.toLocaleString('en-US'), 'yellow'),
+        { id: 'lin', t: 'bar', x: 180, y: 186, w: 80, h: 150, label: n.toLocaleString('en-US'), sub: 'LINEAR' },
+        { id: 'bin', t: 'bar', x: 330, y: 186, w: 80, h: Math.max(4, 150 * bn / n), label: bn, sub: 'BINARY', cls: 'done' }
+      ] };
+    };
+    return [
+      { title: 'Linear: check one by one', frames: [
+        lin(0, '8? No. Next.'), lin(1, '3? No.'), lin(2, '6? No.'), lin(3, '1? No.'),
+        lin(4, '**9**! Found at index 4.'),
+        lin(-1, 'Worst case: check **all n**. O(n).')
+      ] },
+      { title: 'Binary: check the middle', frames: [
+        bs(B, 45, 0, 10, -1, 'A **sorted** list. Find 45.'),
+        bs(B, 45, 0, 10, 5, '23 < 45 → drop the **left** half.'),
+        bs(B, 45, 6, 10, 8, '56 > 45 → drop the **right** half.'),
+        bs(B, 45, 6, 7, 6, '38 < 45 → go right.'),
+        bs(B, 45, 7, 7, 7, 'Found in **4** checks, not 8.', { found: true })
+      ] },
+      { title: 'Halving wins big', frames: [
+        halve(16, '16 items: 16 checks vs **4**.'),
+        halve(1000, '1,000 items: 1,000 vs **10**.'),
+        halve(1000000, 'A million items: just **20**. O(log n).')
+      ] },
+      { title: 'Unsorted? It misses', trap: true, frames: [
+        bs(U2, 2, 0, 6, -1, 'Not sorted. Find 2.'),
+        bs(U2, 2, 0, 6, 3, '1 < 2 → drop the left half…'),
+        bs(U2, 2, 4, 6, -1, '…but **2 was on the left!**', { bad: 1 }),
+        bs(U2, 2, 4, 6, 5, '3 > 2 → go left.', { bad: 1 }),
+        bs(U2, 2, 4, 4, 4, '"Not found." Wrong. **Sort first.**', { bad: 1 })
+      ] }
+    ];
+  }
+
   ST.topic({
-    id: 'search', n: 2, week: 'Week 2', color: 'yellow', icon: 'search',
+    id: 'search', n: 2, color: 'yellow', icon: 'search',
     title: 'Searching',
     short: 'Linear search checks every box. Binary search cuts the list in half.',
     blurb: 'Two ways to find a value. One is much faster on sorted data.',
-    remember: [
-      { big: '→ → → →', text: 'Linear search: check one by one. Worst case O(n).' },
-      { big: 'LOW · MID · HIGH', text: 'Binary search: look at the middle, then drop half.' },
-      { big: 'SORTED FIRST', text: 'Binary search only works on a sorted list. Worst case O(log n).' }
-    ],
     cheat: {
       head: ['', 'Linear', 'Binary'],
       rows: [
@@ -224,7 +288,8 @@
         ['1,000,000 items', '1,000,000 checks', '20 checks']
       ]
     },
-    mistake: 'Use mid = low + (high − low) / 2. Writing (low + high) / 2 can overflow when the numbers are very big.',
+    lesson: lesson(),
+    rules: RULES,
     labs: [
       { id: 'linear', title: 'Linear search', tag: 'TRACE', setup: linearLab },
       { id: 'binary', title: 'Binary search', tag: 'TRACE', setup: binaryLab },

@@ -1,4 +1,4 @@
-/* World 1 — Arrays, memory and Big-O (Weeks 1–2) */
+/* World 1 — Arrays, memory and Big-O */
 (function (ST) {
   'use strict';
   const h = ST.h, U = ST.util, ui = ST.ui;
@@ -197,16 +197,77 @@
     return L;
   }
 
+  // ================================================================ lesson
+  const lk = ST.lk;
+  const RULES = [
+    { rule: 'Dynamic arrays grow ×2', note: 'Like C# List<T>. Some languages grow ×1.5. Adding stays O(1) on average either way.' }
+  ];
+  function lesson() {
+    const vals = [7, 3, 9, 4, 6];
+    const addr = function (i) { return String(1000 + i * 4); };
+    const idx = function (i) { return '[' + i + ']'; };
+    const mem = function (o) {
+      return lk.cells('m', vals.map(function (v) { return o.empty ? '' : v; }), Object.assign({ w: 62, y: 100, sub: addr, cls: o.empty ? 'ghost' : '' }, o));
+    };
+    const jump = function (i, cap) {
+      const xs = lk.xs(5, 62);
+      return { cap: cap, nodes: mem({ top: idx, cls: function (k) { return k === i ? 'cur' : ''; } }).concat([
+        lk.tag('base', xs[0], 26, 'BASE 1000', 'blue'),
+        lk.text('f', 330, 26, '1000 + ' + i + ' × 4 = ' + addr(i), 'pix', 17),
+        lk.ptr('p', xs[i], 158, 'arr[' + i + ']', 'red')
+      ]) };
+    };
+    const grow = function (step, cap) {
+      const top = lk.xs(4, 48), bot = lk.xs(8, 48);
+      const n = [];
+      if (step >= 1) bot.forEach(function (x, k) { n.push({ id: 'g' + k, t: 'cell', x: x, y: 165, w: 48, h: 48, label: '', cls: 'ghost' }); });
+      if (step === 2) top.forEach(function (x, k) { n.push({ id: 'o' + k, t: 'cell', x: x, y: 60, w: 48, h: 48, label: 'ABCD'[k], cls: 'ghost' }); });
+      if (step < 3) n.push(lk.text('oldl', 240, 22, step === 0 ? 'CAPACITY 4 · FULL' : 'OLD ARRAY', step === 0 ? 'red' : 'ink', 14));
+      if (step >= 1) n.push(lk.text('newl', 240, 124, 'NEW ARRAY · CAPACITY 8', 'blue', 14));
+      'ABCD'.split('').forEach(function (v, k) {
+        n.push({ id: v, t: 'cell', x: step >= 2 ? bot[k] : top[k], y: step >= 2 ? 165 : 60, w: 48, h: 48, label: v, cls: step === 2 ? 'wait' : '' });
+      });
+      n.push({ id: 'E', t: 'cell', x: step >= 3 ? bot[4] : 430, y: step >= 3 ? 165 : 60, w: 48, h: 48, label: 'E', cls: step >= 3 ? 'cur' : 'new' });
+      return { nodes: n, cap: cap };
+    };
+    const race = function (n, cap) {
+      const xs = lk.xs(4, 60, 50);
+      const fs = [['O(1)', 1], ['O(log n)', Math.max(1, Math.log2(n))], ['O(n)', n], ['O(n²)', n * n]];
+      return { cap: cap, nodes: [lk.tag('n', 50, 24, 'n = ' + n, 'yellow')].concat(fs.map(function (f, k) {
+        return { id: 'b' + k, t: 'bar', x: xs[k], y: 186, w: 60, h: Math.max(4, Math.min(150, f[1])), label: Math.round(f[1]), sub: f[0], cls: k === 3 ? 'bad' : (k === 0 ? 'done' : '') };
+      })) };
+    };
+    return [
+      { title: 'One block of memory', frames: [
+        { nodes: mem({ empty: true }), cap: 'Memory is a row of numbered slots.' },
+        { nodes: mem({}), cap: 'An array takes slots **side by side**.' },
+        { nodes: mem({ top: idx }), cap: 'Each slot gets an **index**, from 0.' }
+      ] },
+      { title: 'arr[i] = base + i × size', frames: [
+        jump(0, 'arr[0] is the base: **zero** steps away.'),
+        jump(3, 'arr[3]: one calculation, **one jump**.'),
+        jump(1, 'Any index costs the same: **O(1)**.')
+      ] },
+      { title: 'Full? Double it and copy', frames: [
+        grow(0, 'Full! **E** has no room.'),
+        grow(1, 'Make a new array, **twice** as big.'),
+        grow(2, 'Copy every value: **O(n)**, but rare.'),
+        grow(3, 'E fits. The next 3 adds are cheap.')
+      ] },
+      { title: 'Big-O = how work grows', frames: [
+        race(2, 'Small n: they all look the same.'),
+        race(4, 'Double n…'),
+        race(8, '…O(n) doubles, O(n²) grows **4×**.'),
+        race(12, 'Big-O tells you who wins when n is **big**.')
+      ] }
+    ];
+  }
+
   ST.topic({
-    id: 'basics', n: 1, week: 'Weeks 1–2', color: 'blue', icon: 'basics',
+    id: 'basics', n: 1, color: 'blue', icon: 'basics',
     title: 'Arrays & Big-O',
     short: 'Memory, array addresses, growing arrays, and how work grows.',
     blurb: 'Where data lives in memory, and how we measure speed.',
-    remember: [
-      { big: 'BASE + i × SIZE', text: 'An array index is just a jump. That is why arr[i] is O(1).' },
-      { big: 'COUNT ≤ CAPACITY', text: 'A dynamic array doubles its capacity when it is full, then copies.' },
-      { big: 'O( ) = GROWTH', text: 'Big-O says how the work grows when the input n grows.' }
-    ],
     cheat: {
       head: ['Idea', 'Remember'],
       rows: [
@@ -217,7 +278,8 @@
         ['Algorithm', 'Finite, clear steps: input → output']
       ]
     },
-    mistake: 'Indexes start at 0 because the index is the distance from the base address. Index 0 = no distance.',
+    lesson: lesson(),
+    rules: RULES,
     labs: [
       { id: 'address', title: 'Memory address', tag: 'TRACE', setup: addressLab },
       { id: 'dynamic', title: 'Dynamic array grows', tag: 'TRACE', setup: dynamicLab },

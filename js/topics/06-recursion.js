@@ -1,4 +1,4 @@
-/* World 6 — Recursion, Merge Sort, Quick Sort (Week 6) */
+/* World 6 — Recursion, Merge Sort, Quick Sort */
 (function (ST) {
   'use strict';
   const h = ST.h, U = ST.util, ui = ST.ui;
@@ -433,21 +433,81 @@
     return L;
   }
 
+  // ================================================================ lesson
+  const lk = ST.lk;
+  const RULES = [
+    { rule: 'Quick Sort pivot = last item', note: 'Other versions pick the first, the middle, or a random item.' }
+  ];
+  function lesson() {
+    // call stack: list of [id, label, cls], bottom first
+    const calls = function (list, cap, extra) {
+      const n = [lk.text('csl', 170, 24, 'CALL STACK', 'ink', 13)];
+      list.forEach(function (c, k) { n.push({ id: c[0], t: 'cell', x: 170, y: 190 - k * 40, w: 236, h: 34, label: c[1], cls: c[2] || '', fs: 15, from: { x: 170, y: -20 } }); });
+      return { nodes: n.concat(extra || []), cap: cap };
+    };
+    const f3 = 'fact(3) = 3 × fact(2)', f2 = 'fact(2) = 2 × fact(1)';
+    const deep = ['fact(3)', 'fact(2)', 'fact(1)', 'fact(0)', 'fact(−1)', 'fact(−2)', 'fact(−3)', 'fact(−4)'];
+    const overCaps = ['fact(n) with **no base case**…', '…calls fact(n − 1)…', '…calls again…', '…fact(0)…', '…fact(−1). Never stops…', '…', '…', '**Stack overflow!** Always write the stop rule.'];
+    const over = deep.map(function (lbl, k) {
+      const n = [lk.text('lim', 170, 12, '— MEMORY LIMIT —', 'red', 12)];
+      for (let j = 0; j <= k; j++) n.push({ id: 'o' + j, t: 'cell', x: 170, y: 202 - j * 25, w: 150, h: 21, label: deep[j], fs: 13, cls: k === deep.length - 1 ? 'bad' : (j === k ? 'cur' : ''), from: { x: 170, y: -20 } });
+      if (k === deep.length - 1) n.push(lk.tag('so', 370, 110, 'STACK OVERFLOW', 'red'));
+      return { nodes: n, cap: overCaps[k] };
+    });
+    // merge sort: value → [x, y, cls]
+    const ms = function (place, cap) {
+      return { cap: cap, nodes: Object.keys(place).map(function (v) { const p = place[v]; return { id: 'v' + v, t: 'cell', x: p[0], y: p[1], w: 46, h: 46, label: v, cls: p[2] || '' }; }) };
+    };
+    const TOP = [162, 214, 266, 318];
+    const Q = function (arr, cls, cap, labels) {
+      const xs = lk.xs(5, 56);
+      const n = lk.cells('q', arr, { w: 56, y: 100, ids: arr.map(function (v) { return 'q' + v; }), cls: function (i, v) { return cls[v] || ''; } });
+      if (labels) n.push(lk.text('sm', (xs[0] + xs[1]) / 2, 156, 'SMALLER', 'blue', 13), lk.text('bg', (xs[3] + xs[4]) / 2, 156, 'BIGGER', 'ink', 13));
+      return { nodes: n, cap: cap };
+    };
+    return [
+      { title: 'A function that calls itself', frames: [
+        calls([['c3', f3]], 'fact(3) needs fact(2)…'),
+        calls([['c3', f3], ['c2', f2]], '…which needs fact(1)…'),
+        calls([['c3', f3], ['c2', f2], ['c1', 'fact(1) = 1', 'done']], '**Base case**: fact(1) = 1. Stop.'),
+        calls([['c3', f3], ['c2', '2 × 1 = 2', 'cur']], 'Return 1. fact(2) = **2**.', [lk.tag('ret', 380, 150, '← 1', 'teal')]),
+        calls([['c3', '3 × 2 = 6', 'cur']], 'Return 2. fact(3) = **6**.', [lk.tag('ret', 380, 190, '← 2', 'teal')]),
+        calls([], 'The stack **unwinds** back to empty.', [lk.tag('ans', 240, 120, 'fact(3) = 6', 'yellow', 20)])
+      ] },
+      { title: 'No base case? Overflow', trap: true, frames: over },
+      { title: 'Merge Sort: split, then merge', frames: [
+        ms({ 38: [162, 40], 27: [214, 40], 43: [266, 40], 3: [318, 40] }, 'Sort [38, 27, 43, 3].'),
+        ms({ 38: [120, 110], 27: [172, 110], 43: [308, 110], 3: [360, 110] }, '**Split** in half…'),
+        ms({ 38: [70, 180], 27: [170, 180], 43: [310, 180], 3: [410, 180] }, '…until each part has 1 item.'),
+        ms({ 27: [120, 110, 'done'], 38: [172, 110, 'done'], 3: [308, 110, 'done'], 43: [360, 110, 'done'] }, '**Merge** pairs back in order.'),
+        ms({ 27: [120, 110, 'cur'], 38: [172, 110], 3: [TOP[0], 40, 'done'], 43: [360, 110, 'cur'] }, 'Fronts: 3 < 27 → take **3**.'),
+        ms({ 27: [TOP[1], 40, 'done'], 38: [172, 110, 'cur'], 3: [TOP[0], 40, 'done'], 43: [360, 110, 'cur'] }, '27 < 43 → take **27**.'),
+        ms({ 27: [TOP[1], 40, 'done'], 38: [TOP[2], 40, 'done'], 3: [TOP[0], 40, 'done'], 43: [360, 110, 'cur'] }, '38 < 43 → take **38**.'),
+        ms({ 27: [TOP[1], 40, 'done'], 38: [TOP[2], 40, 'done'], 3: [TOP[0], 40, 'done'], 43: [TOP[3], 40, 'done'] }, 'Sorted. Always **O(n log n)**.')
+      ] },
+      { title: 'Quick Sort: pivot finds home', frames: [
+        Q([7, 2, 9, 4, 5], { 5: 'pivot' }, 'Pivot = the **last** item: 5.'),
+        Q([7, 2, 9, 4, 5], { 5: 'pivot', 7: 'cur' }, '7 > 5: leave it.'),
+        Q([2, 7, 9, 4, 5], { 5: 'pivot', 2: 'wait' }, '2 < 5 → move it **left**.'),
+        Q([2, 7, 9, 4, 5], { 5: 'pivot', 2: 'wait', 9: 'cur' }, '9 > 5: leave it.'),
+        Q([2, 4, 9, 7, 5], { 5: 'pivot', 2: 'wait', 4: 'wait' }, '4 < 5 → move it **left**.'),
+        Q([2, 4, 5, 7, 9], { 5: 'done', 2: 'wait', 4: 'wait' }, 'Pivot goes between: its **final** spot.'),
+        Q([2, 4, 5, 7, 9], { 5: 'done', 2: 'wait', 4: 'wait' }, 'Now repeat on each side.', true)
+      ] }
+    ];
+  }
+
   ST.topic({
-    id: 'recursion', n: 6, week: 'Week 6', color: 'orange', icon: 'recursion',
+    id: 'recursion', n: 6, color: 'orange', icon: 'recursion',
     title: 'Recursion, Merge & Quick Sort',
     short: 'Functions that call themselves, and two fast divide-and-conquer sorts.',
     blurb: 'Solve a big problem by solving a smaller copy of it.',
-    remember: [
-      { big: 'BASE CASE = STOP', text: 'Every recursive function needs a stop rule, or the stack overflows.' },
-      { big: 'SPLIT · SORT · MERGE', text: 'Merge Sort halves the array, then merges sorted halves.' },
-      { big: 'PIVOT · PARTITION', text: 'Quick Sort puts the pivot in its final place, then sorts each side.' }
-    ],
     cheat: {
       head: ['', 'Merge Sort', 'Quick Sort'],
       rows: [['Main idea', 'Split & merge', 'Pivot & partition'], ['Best / average', 'O(n log n)', 'O(n log n)'], ['Worst', 'O(n log n)', 'O(n²)'], ['Extra memory', 'More (temp arrays)', 'Less']]
     },
-    mistake: 'Merging is not just joining two arrays. You compare the fronts and copy the smaller value, one at a time.',
+    lesson: lesson(),
+    rules: RULES,
     labs: [
       { id: 'callstack', title: 'Call stack', tag: 'TRACE', setup: callStackLab },
       { id: 'merge', title: 'Merge Sort', tag: 'TRACE', setup: mergeLab },

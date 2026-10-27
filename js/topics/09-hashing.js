@@ -1,4 +1,4 @@
-/* World 9 — Hash tables, collisions, maps and sets (Week 11) */
+/* World 9 — Hash tables, collisions, maps and sets */
 (function (ST) {
   'use strict';
   const h = ST.h, U = ST.util, ui = ST.ui;
@@ -278,21 +278,81 @@
     return L;
   }
 
+  // ================================================================ lesson
+  const lk = ST.lk;
+  const RULES = [
+    { rule: 'hash = (sum of char codes) % size', note: 'Easy to do by hand. Real hash functions mix the bits much more.' },
+    { rule: 'Probing: try +1, wrap to 0', note: 'This is linear probing. Others: quadratic probing, double hashing.' }
+  ];
+  function lesson() {
+    const SX = lk.xs(7, 52, 6), SY = 150;
+    // keys: { index: key }. o: { hot, bad, done: key, extra: [], edges: [] }
+    const table = function (keys, cap, o) {
+      o = o || {};
+      const n = SX.map(function (x, k) { return { id: 'slot' + k, t: 'cell', x: x, y: SY, w: 52, h: 48, label: '', top: String(k), cls: k === o.hot ? 'cur' : (k === o.bad ? 'bad' : 'ghost') }; });
+      Object.keys(keys).forEach(function (k) { n.push({ id: 'k' + keys[k], t: 'cell', x: SX[k], y: SY, w: 52, h: 48, label: keys[k], fs: 15, cls: o.done === keys[k] ? 'done' : (Number(k) === o.bad ? 'bad' : '') }); });
+      return { nodes: n.concat(o.extra || []), edges: o.edges || [], cap: cap };
+    };
+    const key = function (k, x, y, cls) { return { id: 'k' + k, t: 'cell', x: x, y: y, w: 60, h: 36, label: k, fs: 15, cls: cls || 'cur' }; };
+    const T3 = { 6: 'CAT', 1: 'DOG', 4: 'OWL' };
+    const sum = function (s) { return lk.text('sum', 240, 88, s, 'ink', 15); };
+    const pair = function (k, v, y, cls) {
+      return [{ id: 'mk' + k, t: 'cell', x: 80, y: y, w: 70, h: 36, label: k, fs: 15 }, { id: 'mv' + k, t: 'cell', x: 160, y: y, w: 80, h: 36, label: v, fs: 15, cls: cls || 'paper' }];
+    };
+    const mapset = function (step, cap) {
+      let n = [lk.text('ml', 120, 24, 'MAP: key → value', 'ink', 14), lk.text('sl', 360, 24, 'SET: keys only', 'ink', 14)];
+      n = n.concat(pair('CAT', step >= 3 ? 'purr' : 'meow', 70, step >= 3 ? 'cur' : ''), pair('DOG', 'woof', 115));
+      if (step >= 1) n.push({ id: 'sCAT', t: 'cell', x: 360, y: 70, w: 70, h: 36, label: 'CAT', fs: 15 }, { id: 'sDOG', t: 'cell', x: 360, y: 115, w: 70, h: 36, label: 'DOG', fs: 15 });
+      if (step === 2) n.push({ id: 'sNew', t: 'cell', x: 360, y: 165, w: 70, h: 36, label: 'CAT', fs: 15, cls: 'bad', from: { x: 360, y: 240 } }, lk.text('dup', 360, 202, 'already in!', 'red', 13));
+      return { nodes: n, cap: cap };
+    };
+    return [
+      { title: 'Key → number → index', frames: [
+        table({}, 'Store the key **"CAT"**.', { extra: [key('CAT', 240, 36)] }),
+        table({}, 'Add up the character codes: **216**.', { extra: [key('CAT', 240, 36), sum('C 67 + A 65 + T 84 = 216')] }),
+        table({}, 'Remainder by the table size: index **6**.', { hot: 6, extra: [key('CAT', 240, 36), sum('216 % 7 = 6')] }),
+        table({ 6: 'CAT' }, 'Store it at **6**.', { done: 'CAT' })
+      ] },
+      { title: 'Find it in one jump', frames: [
+        table(T3, 'A table with 3 keys.'),
+        table(T3, 'get("OWL"): hash again → **4**.', { extra: [lk.tag('q', 240, 30, 'get("OWL")', 'yellow'), sum('O 79 + W 87 + L 76 = 242 → 242 % 7 = 4')] }),
+        table(T3, 'Jump straight there: **O(1)** on average.', { done: 'OWL', extra: [lk.tag('q', 240, 30, 'get("OWL")', 'yellow'), lk.ptr('p', SX[4], 108, '', 'red', true)] })
+      ] },
+      { title: 'Two keys, one slot', trap: true, frames: [
+        table(T3, 'Now store **"ACT"**.', { extra: [key('ACT', 240, 36)] }),
+        table(T3, 'Same letters, same sum: **216 → 6**.', { extra: [key('ACT', 240, 36), sum('A 65 + C 67 + T 84 = 216 → 6')] }),
+        table(T3, 'Slot 6 is taken! A **collision**.', { bad: 6, extra: [key('ACT', SX[6], 76, 'bad')] })
+      ] },
+      { title: 'Fix 1: chaining', vb: [480, 250], frames: [
+        table(T3, 'Collision at 6.', { bad: 6, extra: [key('ACT', SX[6], 76, 'bad')] }),
+        table(T3, 'Hang ACT in a **chain** under slot 6.', { extra: [key('ACT', SX[6], 222, 'wait')], edges: [lk.arrow('kCAT', 'kACT')] }),
+        table(T3, 'get("ACT"): go to 6, walk the chain.', { done: 'CAT', extra: [key('ACT', SX[6], 222, 'done')], edges: [lk.arrow('kCAT', 'kACT', 'path')] })
+      ] },
+      { title: 'Fix 2: linear probing', frames: [
+        table(T3, 'Collision at 6.', { bad: 6, extra: [key('ACT', SX[6], 76, 'bad')] }),
+        table(T3, 'Try the next slot. Past the end? **Wrap to 0**.', { hot: 0, extra: [key('ACT', SX[0], 76, 'cur'), sum('6 is taken → (6 + 1) % 7 = 0')] }),
+        table(Object.assign({ 0: 'ACT' }, T3), 'Slot 0 is free. Store ACT there.', { done: 'ACT' })
+      ] },
+      { title: 'Map vs Set', frames: [
+        mapset(0, 'A **map** stores key → value.'),
+        mapset(1, 'A **set** stores keys only.'),
+        mapset(2, 'Add CAT again? A set keeps **one** copy.'),
+        mapset(3, 'Map: same key → the value is **replaced**.')
+      ] }
+    ];
+  }
+
   ST.topic({
-    id: 'hashing', n: 9, week: 'Week 11', color: 'blue', icon: 'hashing',
+    id: 'hashing', n: 9, color: 'blue', icon: 'hashing',
     title: 'Hash Tables, Maps & Sets',
     short: 'Turn a key into an index and jump straight to it.',
     blurb: 'Find a record in one jump. The key tells you where to look.',
-    remember: [
-      { big: 'KEY → HASH → INDEX', text: 'The same key always gives the same index.' },
-      { big: 'SUM % SIZE', text: 'Class hash: add the character codes, then take the remainder.' },
-      { big: 'CHAIN OR PROBE', text: 'Collision: add to a chain, or try the next empty slot.' }
-    ],
     cheat: {
       head: ['Search method', 'Time'],
       rows: [['Linear search', 'O(n)'], ['Binary search', 'O(log n)'], ['Hash table (average)', 'O(1)'], ['Hash table (worst, many collisions)', 'O(n)']]
     },
-    mistake: 'A good hash function does not give every key its own slot. Different keys can still land on the same index — that is a collision.',
+    lesson: lesson(),
+    rules: RULES,
     labs: [
       { id: 'function', title: 'Hash function', tag: 'TRACE', setup: fnLab },
       { id: 'collisions', title: 'Collisions', tag: 'TRACE', setup: collideLab },

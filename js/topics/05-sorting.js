@@ -1,4 +1,4 @@
-/* World 5 — Sorting: Bubble, Selection, Insertion (Week 4) */
+/* World 5 — Sorting: Bubble, Selection, Insertion */
 (function (ST) {
   'use strict';
   const h = ST.h, U = ST.util, ui = ST.ui;
@@ -363,16 +363,73 @@
     return L;
   }
 
+  // ================================================================ lesson
+  const lk = ST.lk;
+  const RULES = [
+    { rule: 'Code = our C# class methods', note: 'Our Bubble Sort keeps a swapped flag and stops early. Some versions always run n − 1 passes.' }
+  ];
+  function lesson() {
+    // bars keep their value as id, so a swap slides them past each other
+    const bars = function (arr, cls, cap, o) {
+      o = o || {};
+      const xs = lk.xs(arr.length, 50, 22);
+      const n = arr.map(function (v, k) { return { id: 'v' + v, t: 'bar', x: xs[k], y: o.lift === v ? 140 : 196, w: 50, h: v * 18, label: v, cls: (cls && cls(k, v)) || '' }; });
+      return { nodes: n.concat(o.extra || []), cap: cap };
+    };
+    const pair = function (j, c) { return function (k) { return k === j || k === j + 1 ? c : ''; }; };
+    const bub = (function () {
+      const a = [5, 1, 4, 2, 8], F = [bars(a, null, 'Compare **neighbors**. Swap if wrong.')];
+      for (let j = 0; j < a.length - 1; j++) {
+        if (a[j] > a[j + 1]) {
+          const cap = a[j] + ' > ' + a[j + 1] + ' → **swap**.';
+          const t = a[j]; a[j] = a[j + 1]; a[j + 1] = t;
+          F.push(bars(a.slice(), pair(j, 'bad'), cap));
+        } else F.push(bars(a.slice(), pair(j, 'cur'), a[j] + ' < ' + a[j + 1] + ' → keep.'));
+      }
+      F.push(bars(a.slice(), function (k) { return k === a.length - 1 ? 'done' : ''; }, 'The biggest **bubbled** to the end.'));
+      F.push(bars([1, 2, 4, 5, 8], function () { return 'done'; }, 'Repeat until a pass has **no swaps**.'));
+      return F;
+    })();
+    const S = [4, 5, 1, 3, 2];
+    const sel = function (cur, min, cap) { return bars(S, function (k, v) { return v === min ? 'pivot' : (k === cur ? 'cur' : ''); }, cap); };
+    const done = function (upto) { return function (k) { return k <= upto ? 'done' : ''; }; };
+    const stat = function (label, cls) { return { extra: [lk.tag('st', 240, 26, label, cls)] }; };
+    const SORTED = [1, 2, 3, 4, 5];
+    return [
+      { title: 'Bubble: swap neighbors', frames: bub },
+      { title: 'Selection: find the min', frames: [
+        sel(-1, 4, 'Find the **smallest**. Start with 4.'),
+        sel(1, 4, '5 > 4. Min stays 4.'),
+        sel(2, 1, '1 < 4. New min: **1**.'),
+        sel(3, 1, '3 > 1.'),
+        sel(4, 1, '2 > 1. Min is **1**.'),
+        bars([1, 5, 4, 3, 2], function (k) { return k === 0 ? 'done' : (k === 2 ? 'bad' : ''); }, '**One swap** per pass: 1 ↔ 4.'),
+        bars([1, 2, 3, 4, 5], function () { return 'done'; }, 'Repeat on the rest.')
+      ] },
+      { title: 'Insertion: slide it in', frames: [
+        bars([2, 5, 3, 1], done(0), 'The left part is **sorted**.'),
+        bars([2, 5, 3, 1], done(1), '5 ≥ 2: it stays.'),
+        bars([2, 5, 3, 1], done(1), 'Take **3**.', { lift: 3 }),
+        bars([2, 3, 5, 1], function (k) { return k === 2 ? 'done' : (k === 0 ? 'done' : ''); }, '5 > 3 → shift 5 right.', { lift: 3 }),
+        bars([2, 3, 5, 1], done(2), '2 < 3 → drop it in.'),
+        bars([2, 3, 5, 1], done(2), 'Take **1**.', { lift: 1 }),
+        bars([1, 2, 3, 5], function (k) { return k ? 'done' : ''; }, 'Shift every bigger value.', { lift: 1 }),
+        bars([1, 2, 3, 5], done(3), 'Sorted.')
+      ] },
+      { title: 'Already sorted? Depends', frames: [
+        bars(SORTED, null, 'The input is **already sorted**.'),
+        bars(SORTED, done(4), 'Bubble: no swaps → **stop**. O(n).', stat('BUBBLE · 4 COMPARES', 'teal')),
+        bars(SORTED, done(4), 'Insertion: nothing moves. O(n).', stat('INSERTION · 4 COMPARES', 'teal')),
+        bars(SORTED, null, 'Selection scans anyway: **O(n²)**.', stat('SELECTION · 10 COMPARES', 'red'))
+      ] }
+    ];
+  }
+
   ST.topic({
-    id: 'sorting', n: 5, week: 'Week 4', color: 'yellow', icon: 'sorting',
+    id: 'sorting', n: 5, color: 'yellow', icon: 'sorting',
     title: 'Sorting',
     short: 'Bubble, Selection and Insertion Sort — one compare at a time.',
     blurb: 'Three simple sorts. Same goal, different moves.',
-    remember: [
-      { big: 'BUBBLE ⇄', text: 'Compare neighbors. Swap if wrong. The biggest bubbles to the end.' },
-      { big: 'SELECTION ↓MIN', text: 'Find the smallest value. Swap it to the front.' },
-      { big: 'INSERTION ⤵', text: 'Take the next value. Slide it into the sorted part.' }
-    ],
     cheat: {
       head: ['Sort', 'Main move', 'Worst', 'Best', 'Good for'],
       rows: [
@@ -381,7 +438,8 @@
         ['Insertion', 'Shift and insert', 'O(n²)', 'O(n)', 'Almost sorted lists']
       ]
     },
-    mistake: 'Selection Sort swaps once per pass, not after every compare. It only remembers the index of the smallest value.',
+    lesson: lesson(),
+    rules: RULES,
     labs: [
       { id: 'bubble', title: 'Bubble Sort', tag: 'TRACE', setup: sortLab('bubble') },
       { id: 'selection', title: 'Selection Sort', tag: 'TRACE', setup: sortLab('selection') },
