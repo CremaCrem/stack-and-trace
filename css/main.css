@@ -3,6 +3,16 @@
    Look: paper collage + pixel type + brutalist blocks.
    ========================================================= */
 
+/* Digits only (0-9) from Jersey 10: Pixelify Sans draws 2, 5 and 8 almost identically. */
+@font-face {
+  font-family: 'Pixel Digits';
+  src: url(https://fonts.gstatic.com/s/jersey10/v4/GftH7vZKsggXMf9n_J5n_5jh6V89Sg.woff2) format('woff2');
+  unicode-range: U+0030-0039;
+  size-adjust: 135%;
+  font-weight: 100 900;
+  font-display: swap;
+}
+
 :root {
   --paper: #EFECE4;
   --paper-2: #E2DED2;
@@ -20,7 +30,7 @@
   --teal: #12A594;
   --orange: #FF8B2B;
 
-  --f-pixel: 'Pixelify Sans', 'Silkscreen', ui-monospace, monospace;
+  --f-pixel: 'Pixel Digits', 'Pixelify Sans', 'Silkscreen', ui-monospace, monospace;
   --f-chip: 'Silkscreen', 'Pixelify Sans', ui-monospace, monospace;
   --f-body: 'Atkinson Hyperlegible', 'Segoe UI', system-ui, sans-serif;
   --f-mono: 'IBM Plex Mono', ui-monospace, 'Cascadia Mono', monospace;
